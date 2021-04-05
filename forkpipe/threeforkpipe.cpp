@@ -38,6 +38,7 @@ int main()
    }
 
    pid_ps = fork();
+
    if (pid_ps < 0)
    {
       perror("Error during fork A");
@@ -54,7 +55,7 @@ int main()
       close(pipeFD_grep[WRITE]);
       close(pipeFD_ps[READ]);
 
-      dup2(pipeFD_ps[WRITE], 1); // stdout is pipe write
+      dup2(pipeFD_ps[WRITE], 1); // stdout is pipe ps write
       execlp("/bin/ps", "ps", "-A", NULL);
 
       exit(EXIT_FAILURE);
@@ -77,8 +78,8 @@ int main()
          close(pipeFD_grep[READ]);
          close(pipeFD_ps[WRITE]);
 
-         dup2(pipeFD_ps[READ], 0);    // stdin is pipe1 read
-         dup2(pipeFD_grep[WRITE], 1); // stdout is pipe2 write
+         dup2(pipeFD_ps[READ], 0);    // stdin is pipe ps read
+         dup2(pipeFD_grep[WRITE], 1); // stdout is pipe grep write
          execlp("grep", "grep", "worker", NULL);
 
          exit(EXIT_FAILURE);
@@ -86,6 +87,7 @@ int main()
       else
       {
          pid_wc = fork();
+
          if (pid_wc < 0)
          {
             perror("Error during fork wc");
@@ -100,8 +102,8 @@ int main()
             close(pipeFD_grep[WRITE]);
             close(pipeFD_wc[READ]);
 
-            dup2(pipeFD_grep[READ], 0);
-            dup2(pipeFD_wc[WRITE], 1);
+            dup2(pipeFD_grep[READ], 0); // stdin is pipe grep read
+            dup2(pipeFD_wc[WRITE], 1); // stdout is pipee wc write
 
             execlp("wc", "wc", "-l", NULL);
 
@@ -110,12 +112,10 @@ int main()
          else
          {
             cout << "----- Parent -----" << endl;
+
             close(pipeFD_grep[WRITE]);
             close(pipeFD_ps[READ]);
             close(pipeFD_ps[WRITE]);
-
-            int status;
-            int waitPid = wait(&status);
 
             char buf[BUF_SIZE];
             int n = read(pipeFD_wc[READ], buf, BUF_SIZE);
@@ -123,6 +123,7 @@ int main()
             cout << buf;
 
             cout << "Parent exiting.." << endl;
+            exit(EXIT_SUCCESS);
          }
       }
    }
